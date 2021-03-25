@@ -1,6 +1,6 @@
 #!/usr/bin/env sh
 BRANCH=maint-0.7
-RELEASE=0.7.1
+RELEASE=0.7.3
 USER=john.doe@example.org
 PASS=mysecretpassword
 rm -rf /tmp/reana-$RELEASE
