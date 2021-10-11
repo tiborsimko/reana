@@ -10,6 +10,7 @@ rm -rf  ~/.virtualenvs/reana-$RELEASE
 virtualenv ~/.virtualenvs/reana-$RELEASE
 source ~/.virtualenvs/reana-$RELEASE/bin/activate
 #pip install reana-client==$RELEASE
+(cd  /home/tibor/private/project/reana/src/reana-client && pip install .)
 git clone https://github.com/reanahub/reana-demo-helloworld --depth 1
 kind delete cluster
 wget https://raw.githubusercontent.com/reanahub/reana/$BRANCH/etc/kind-localhost-30443.yaml
