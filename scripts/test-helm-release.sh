@@ -19,7 +19,7 @@ wget https://raw.githubusercontent.com/reanahub/reana/$BRANCH/scripts/prefetch-i
 sh prefetch-images.sh
 helm repo add reanahub https://reanahub.github.io/reana
 helm repo update
-helm install reana reanahub/reana --namespace reana --create-namespace --wait
+helm install reana reanahub/reana --version $RELEASE --namespace reana --create-namespace --wait
 wget https://raw.githubusercontent.com/reanahub/reana/$BRANCH/scripts/create-admin-user.sh
 sh create-admin-user.sh reana reana $USER $PASS
 cd reana-demo-helloworld || exit 1
