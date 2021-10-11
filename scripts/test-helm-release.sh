@@ -27,4 +27,5 @@ export REANA_ACCESS_TOKEN=$(kubectl -n reana get secret reana-admin-access-token
 reana-client run -w serial
 reana-client run -w yadage -f ./reana-yadage.yaml
 reana-client run -w cwl -f ./reana-cwl.yaml
+reana-client run -w snakemake -f ./reana-snakemake.yaml
 firefox $REANA_SERVER_URL
