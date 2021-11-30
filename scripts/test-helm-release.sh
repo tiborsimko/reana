@@ -1,6 +1,6 @@
 #!/usr/bin/env sh
 BRANCH=master
-RELEASE=0.8.0-alpha.4
+RELEASE=0.8.0
 USER=john.doe@example.org
 PASS=mysecretpassword
 rm -rf /tmp/reana-$RELEASE
@@ -9,7 +9,7 @@ cd /tmp/reana-$RELEASE || exit 1
 rm -rf  ~/.virtualenvs/reana-$RELEASE
 virtualenv ~/.virtualenvs/reana-$RELEASE
 source ~/.virtualenvs/reana-$RELEASE/bin/activate
-pip install reana-client --pre
+pip install reana-client==$RELEASE
 git clone https://github.com/reanahub/reana-demo-helloworld --depth 1
 kind delete cluster
 wget https://raw.githubusercontent.com/reanahub/reana/$BRANCH/etc/kind-localhost-30443.yaml
