@@ -1,6 +1,6 @@
 #!/usr/bin/env sh
 BRANCH=master
-RELEASE=0.8.0
+RELEASE=0.8.1
 USER=john.doe@example.org
 PASS=mysecretpassword
 rm -rf /tmp/reana-$RELEASE
