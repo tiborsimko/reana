@@ -1,15 +1,16 @@
 #!/usr/bin/env sh
 BRANCH=master
-RELEASE=0.8.1
+RELEASEPYPI=0.9.0a1
+RELEASEHELM=0.9.0-alpha.1
 USER=john.doe@example.org
 PASS=mysecretpassword
-rm -rf /tmp/reana-$RELEASE
-mkdir -p /tmp/reana-$RELEASE
-cd /tmp/reana-$RELEASE || exit 1
-rm -rf  ~/.virtualenvs/reana-$RELEASE
-virtualenv ~/.virtualenvs/reana-$RELEASE
-source ~/.virtualenvs/reana-$RELEASE/bin/activate
-pip install reana-client==$RELEASE
+rm -rf /tmp/reana-$RELEASEPYPI
+mkdir -p /tmp/reana-$RELEASEPYPI
+cd /tmp/reana-$RELEASEPYPI || exit 1
+rm -rf  ~/.virtualenvs/reana-$RELEASEPYPI
+virtualenv ~/.virtualenvs/reana-$RELEASEPYPI
+source ~/.virtualenvs/reana-$RELEASEPYPI/bin/activate
+pip install reana-client==$RELEASEPYPI
 git clone https://github.com/reanahub/reana-demo-helloworld --depth 1
 kind delete cluster
 wget https://raw.githubusercontent.com/reanahub/reana/$BRANCH/etc/kind-localhost-30443.yaml
@@ -18,7 +19,7 @@ wget https://raw.githubusercontent.com/reanahub/reana/$BRANCH/scripts/prefetch-i
 sh prefetch-images.sh
 helm repo add reanahub https://reanahub.github.io/reana
 helm repo update
-helm install reana reanahub/reana --version $RELEASE --namespace reana --create-namespace --wait
+helm install reana reanahub/reana --version $RELEASEHELM --namespace reana --create-namespace --wait
 wget https://raw.githubusercontent.com/reanahub/reana/$BRANCH/scripts/create-admin-user.sh
 sh create-admin-user.sh reana reana $USER $PASS
 cd reana-demo-helloworld || exit 1
