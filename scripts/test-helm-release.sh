@@ -1,7 +1,7 @@
 #!/usr/bin/env sh
 BRANCH=master
-RELEASEPYPI=0.9.0a3
-RELEASEHELM=0.9.0-alpha.2
+RELEASEPYPI=0.9.0a4
+RELEASEHELM=0.9.0-alpha.3
 USER=john.doe@example.org
 PASS=mysecretpassword
 rm -rf /tmp/reana-$RELEASEPYPI
