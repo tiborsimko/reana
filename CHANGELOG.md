@@ -2,6 +2,182 @@
 
 # Changelog
 
+## [0.95.0](https://github.com/tiborsimko/reana/compare/v0.9.4...0.95.0) (2026-01-21)
+
+
+### ⚠ BREAKING CHANGES
+
+* **reana-dev:** The `docker-build` command is now intended for single-platform local development builds only, and the `docker-push` command has been fully deprecated in favour of `release-docker`.
+* **python:** drop support for Python 3.6 and 3.7
+
+### Build
+
+* **docker:** upgrade to Ubuntu 24.04 and Python 3.12 ([#810](https://github.com/tiborsimko/reana/issues/810)) ([69eb86b](https://github.com/tiborsimko/reana/commit/69eb86b21fe9c7fc1d4cfa39905ef5ddb4c1c756))
+* **helm:** add support for Kubernetes 1.29 ([#775](https://github.com/tiborsimko/reana/issues/775)) ([ae90500](https://github.com/tiborsimko/reana/commit/ae90500acbc101913df1e0b25aa3f2d48de997f0))
+* **helm:** add support for Kubernetes 1.30 ([#799](https://github.com/tiborsimko/reana/issues/799)) ([748ca07](https://github.com/tiborsimko/reana/commit/748ca0769c24286cb32b8bfaf3df0114748cfae0))
+* **helm:** add support for Kubernetes 1.31 ([#822](https://github.com/tiborsimko/reana/issues/822)) ([7da51d3](https://github.com/tiborsimko/reana/commit/7da51d3be56b9bf03381c41342fb141cfb36b84b))
+* **helm:** upgrade PgBouncer to 1.24.1 ([#907](https://github.com/tiborsimko/reana/issues/907)) ([d449404](https://github.com/tiborsimko/reana/commit/d449404768de015a0d47da67d7aee4339849ba76))
+* **helm:** upgrade Traefik to v3 ([#832](https://github.com/tiborsimko/reana/issues/832)) ([0c0849d](https://github.com/tiborsimko/reana/commit/0c0849de8173c3fee6803964f62cb8ab821487d4))
+* **python:** add minimal `pyproject.toml` ([#815](https://github.com/tiborsimko/reana/issues/815)) ([9112171](https://github.com/tiborsimko/reana/commit/9112171e28faddac6b000dba48d9fec8ee8963d3))
+* **python:** drop support for Python 3.6 and 3.7 ([#793](https://github.com/tiborsimko/reana/issues/793)) ([8762855](https://github.com/tiborsimko/reana/commit/8762855d33f859215233439496fc1934532482c4))
+* **python:** remove deprecated `pytest-runner` ([#815](https://github.com/tiborsimko/reana/issues/815)) ([d9db515](https://github.com/tiborsimko/reana/commit/d9db515e8a36c6398ed658bc6e8ed0469382ca34))
+* **python:** use optional deps instead of `tests_require` ([#815](https://github.com/tiborsimko/reana/issues/815)) ([668eee4](https://github.com/tiborsimko/reana/commit/668eee4437c4224a84a3c0274bb7c905d2a5b6a4))
+
+
+### Features
+
+* **config:** add Compute4PUNCH backend ([#780](https://github.com/tiborsimko/reana/issues/780)) ([c2f490b](https://github.com/tiborsimko/reana/commit/c2f490b8251ffcebcf53a72ac5f2bcc9ce0190b4))
+* **config:** add new reana-demo-dask-coffea example ([#833](https://github.com/tiborsimko/reana/issues/833)) ([61cf3d6](https://github.com/tiborsimko/reana/commit/61cf3d662934fd36a3ed68d5b7e308f3dc56d9a2))
+* **config:** new reana-demo-agc-cms-ttbar-coffea example ([#792](https://github.com/tiborsimko/reana/issues/792)) ([aff5c8f](https://github.com/tiborsimko/reana/commit/aff5c8f9837af51a42c52d5621cac6e040096941))
+* **config:** set maximum limit for number of Dask workers ([#842](https://github.com/tiborsimko/reana/issues/842)) ([4ffcecb](https://github.com/tiborsimko/reana/commit/4ffcecb7d7f2ff2061fa6dfb19eff9622953f922))
+* **helm:** add EOSC SSO authentication option ([#911](https://github.com/tiborsimko/reana/issues/911)) ([9ad4b4a](https://github.com/tiborsimko/reana/commit/9ad4b4ad1dfaf6b61df2f029bb7b617594e8da9e))
+* **helm:** add FluentBit DaemonSet ([#827](https://github.com/tiborsimko/reana/issues/827)) ([9504101](https://github.com/tiborsimko/reana/commit/950410117e7c703815135a2fa6d39122febc4690))
+* **helm:** add initial Dask support ([#821](https://github.com/tiborsimko/reana/issues/821)) ([c0d2e92](https://github.com/tiborsimko/reana/commit/c0d2e926381baa06bb037451dd4932acd5e771fa))
+* **helm:** add interactive-sessions-env value to reana-server ([#802](https://github.com/tiborsimko/reana/issues/802)) ([085cbea](https://github.com/tiborsimko/reana/commit/085cbeaa1c1ff96ce90819a0eafb1bed7eeabf32))
+* **helm:** add Kueue scheduling option for user workloads ([#903](https://github.com/tiborsimko/reana/issues/903)) ([02053cf](https://github.com/tiborsimko/reana/commit/02053cfb10762877fd5dfe236713548334984b20)), closes [#800](https://github.com/tiborsimko/reana/issues/800)
+* **helm:** add new component reana-dask-kubernetes-operator ([#891](https://github.com/tiborsimko/reana/issues/891)) ([909d2e0](https://github.com/tiborsimko/reana/commit/909d2e070fbb22e7dd81c562d42108a5760cd63b))
+* **helm:** add new component reana-workflow-validator ([#840](https://github.com/tiborsimko/reana/issues/840)) ([d81a814](https://github.com/tiborsimko/reana/commit/d81a814bf884ee9bb400f33171bc1916e62c38a8))
+* **helm:** add OpenSearch deployment ([#827](https://github.com/tiborsimko/reana/issues/827)) ([21a525a](https://github.com/tiborsimko/reana/commit/21a525a5873b529f68e80533e21190649aac5e05))
+* **helm:** add support for PgBouncer ([#818](https://github.com/tiborsimko/reana/issues/818)) ([7b472fe](https://github.com/tiborsimko/reana/commit/7b472fe5761acafc488f2493b0e44e6963d3c16d))
+* **helm:** add value to customise env vars of job controller ([#781](https://github.com/tiborsimko/reana/issues/781)) ([634691f](https://github.com/tiborsimko/reana/commit/634691fd32cfb08d59eafbae66f23ebc384ca84b))
+* **helm:** add value to customise interactive session images ([#795](https://github.com/tiborsimko/reana/issues/795)) ([cd94d12](https://github.com/tiborsimko/reana/commit/cd94d1257a06441146f2284529f929ae5793cd99))
+* **helm:** add value to customise PostgreSQL docker image ([#774](https://github.com/tiborsimko/reana/issues/774)) ([07a191f](https://github.com/tiborsimko/reana/commit/07a191f19c60ac5d11cf1373ef8feaa16b80f0ee)), closes [#773](https://github.com/tiborsimko/reana/issues/773)
+* **helm:** add value to customise URL of privacy notice ([#778](https://github.com/tiborsimko/reana/issues/778)) ([650ddbd](https://github.com/tiborsimko/reana/commit/650ddbd32441251e3d2ff64d8fce463dedb24e51))
+* **helm:** add values to customise env vars of workflow engines ([#781](https://github.com/tiborsimko/reana/issues/781)) ([35ee032](https://github.com/tiborsimko/reana/commit/35ee032da142916b4c966b2a2077a720a5710664))
+* **helm:** allow cluster administrator to configure ingress host ([#804](https://github.com/tiborsimko/reana/issues/804)) ([19ce68e](https://github.com/tiborsimko/reana/commit/19ce68ed25317e246d28cb66c106380488af5278))
+* **helm:** allow cluster administrator to configure ingress host ([#804](https://github.com/tiborsimko/reana/issues/804)) ([1479730](https://github.com/tiborsimko/reana/commit/14797309ff964b7897e072801c441c4c34532856))
+* **helm:** allow configuring number of threads for Dask workers ([#877](https://github.com/tiborsimko/reana/issues/877)) ([3e3dc24](https://github.com/tiborsimko/reana/commit/3e3dc24646f94f6b4ba83346e979938c83e1a0fe)), closes [#874](https://github.com/tiborsimko/reana/issues/874)
+* **helm:** allow only reana-server to connect to reana-cache ([#847](https://github.com/tiborsimko/reana/issues/847)) ([d9c375f](https://github.com/tiborsimko/reana/commit/d9c375fb479829a557f1828a6fcbd30f5a533e26))
+* **helm:** allow only reana-server to connect to reana-cache ([#847](https://github.com/tiborsimko/reana/issues/847)) ([e1772ff](https://github.com/tiborsimko/reana/commit/e1772ffb39d2b1b4c91893f6eda0301edabb105f))
+* **helm:** collect logs from Dask pods ([#850](https://github.com/tiborsimko/reana/issues/850)) ([06fa887](https://github.com/tiborsimko/reana/commit/06fa887e1e8aa3c99058ae4c5a6c6491337cefa2))
+* **helm:** increase default rate limit to 40 requests per second ([#890](https://github.com/tiborsimko/reana/issues/890)) ([3375dae](https://github.com/tiborsimko/reana/commit/3375daed3b428bcc0c692dfdaa4ee828eb8f726c))
+* **helm:** increase default rate limit to 40 requests per second ([#890](https://github.com/tiborsimko/reana/issues/890)) ([e377407](https://github.com/tiborsimko/reana/commit/e377407a85329d2b609900bd8457b1d92eee7299))
+* **helm:** increase default rate limit values ([#826](https://github.com/tiborsimko/reana/issues/826)) ([fcecb6b](https://github.com/tiborsimko/reana/commit/fcecb6bee7ed64dc7855c754c3b2c1a050a263ef)), closes [#825](https://github.com/tiborsimko/reana/issues/825)
+* **helm:** introduce `node_label_infrastructurewc` Helm value ([#885](https://github.com/tiborsimko/reana/issues/885)) ([3375dae](https://github.com/tiborsimko/reana/commit/3375daed3b428bcc0c692dfdaa4ee828eb8f726c))
+* **helm:** introduce `node_label_infrastructurewc` Helm value ([#885](https://github.com/tiborsimko/reana/issues/885)) ([4aac8f4](https://github.com/tiborsimko/reana/commit/4aac8f49419ba452679cd48cd5027c3597c94df5))
+* **helm:** introduce `traefik.external` Helm chart value ([#866](https://github.com/tiborsimko/reana/issues/866)) ([b2074bc](https://github.com/tiborsimko/reana/commit/b2074bc7b261ec7aa7eefc40590b6dd94905cc8c)), closes [#852](https://github.com/tiborsimko/reana/issues/852)
+* **helm:** introduce resource requests and limits for job pods ([#888](https://github.com/tiborsimko/reana/issues/888)) ([3375dae](https://github.com/tiborsimko/reana/commit/3375daed3b428bcc0c692dfdaa4ee828eb8f726c))
+* **helm:** introduce resource requests and limits for job pods ([#888](https://github.com/tiborsimko/reana/issues/888)) ([15ca171](https://github.com/tiborsimko/reana/commit/15ca1719594830a90f45002208e050b3c9f99102)), closes [#883](https://github.com/tiborsimko/reana/issues/883)
+* **helm:** make Dask autoscaler configurable ([#835](https://github.com/tiborsimko/reana/issues/835)) ([debb354](https://github.com/tiborsimko/reana/commit/debb354d8b8074c52672782fd4e944b6874e2fee)), closes [#834](https://github.com/tiborsimko/reana/issues/834)
+* **helm:** release check on most-supported Kubernetes version ([#848](https://github.com/tiborsimko/reana/issues/848)) ([d9c375f](https://github.com/tiborsimko/reana/commit/d9c375fb479829a557f1828a6fcbd30f5a533e26))
+* **helm:** release check on most-supported Kubernetes version ([#848](https://github.com/tiborsimko/reana/issues/848)) ([1a98b0a](https://github.com/tiborsimko/reana/commit/1a98b0ab4d248544a03d83da13a66b399819f713))
+* **helm:** roll all affected deployments when secrets change ([#923](https://github.com/tiborsimko/reana/issues/923)) ([048bb40](https://github.com/tiborsimko/reana/commit/048bb4054f847cf1031dfba423ad578f8d1bed20))
+* **helm:** roll deployments when database config changes ([#818](https://github.com/tiborsimko/reana/issues/818)) ([04082f4](https://github.com/tiborsimko/reana/commit/04082f4da2e3f2cc652d7a8c446b726173aff587))
+* **helm:** support password-protected rabbitmq ([#847](https://github.com/tiborsimko/reana/issues/847)) ([d9c375f](https://github.com/tiborsimko/reana/commit/d9c375fb479829a557f1828a6fcbd30f5a533e26))
+* **helm:** support password-protected rabbitmq ([#847](https://github.com/tiborsimko/reana/issues/847)) ([20a0ea8](https://github.com/tiborsimko/reana/commit/20a0ea8fcf854c74a508f0b415c066a9912fbe34))
+* **helm:** support password-protected redis ([#847](https://github.com/tiborsimko/reana/issues/847)) ([d9c375f](https://github.com/tiborsimko/reana/commit/d9c375fb479829a557f1828a6fcbd30f5a533e26))
+* **helm:** support password-protected redis ([#847](https://github.com/tiborsimko/reana/issues/847)) ([be12076](https://github.com/tiborsimko/reana/commit/be1207630b9cb6c694139d458cd3ea545747b95f))
+* **helm:** use PostgreSQL 14.10 in local dev deployment ([#774](https://github.com/tiborsimko/reana/issues/774)) ([43ead8a](https://github.com/tiborsimko/reana/commit/43ead8ab3d2167458ffa590259b614ade233e853)), closes [#744](https://github.com/tiborsimko/reana/issues/744)
+* **reana-dev:** add `--namespace` option to `run-ci` command ([#862](https://github.com/tiborsimko/reana/issues/862)) ([51c3a11](https://github.com/tiborsimko/reana/commit/51c3a112c0afd1adeb6f004e986369990630ff5f))
+* **reana-dev:** add `git-aggregate-changelog` ([#789](https://github.com/tiborsimko/reana/issues/789)) ([6210b11](https://github.com/tiborsimko/reana/commit/6210b1113e5ad03dc71b604a7d7e9834cfe0fa5d))
+* **reana-dev:** add date to commits bumping dependencies ([#787](https://github.com/tiborsimko/reana/issues/787)) ([a4cb84c](https://github.com/tiborsimko/reana/commit/a4cb84cf5967658365f4963fd7da179747bb764e))
+* **reana-dev:** add release-docker-copy command ([#919](https://github.com/tiborsimko/reana/issues/919)) ([219e202](https://github.com/tiborsimko/reana/commit/219e202790843d378c0d5fc92c64e79b19de8a0f))
+* **reana-dev:** add support for pyproject.toml components ([#916](https://github.com/tiborsimko/reana/issues/916)) ([d475e29](https://github.com/tiborsimko/reana/commit/d475e29df333001d70f384d8fb381093547da077))
+* **reana-dev:** allow using Colima/K3s as an alternative to Kind ([#894](https://github.com/tiborsimko/reana/issues/894)) ([3375dae](https://github.com/tiborsimko/reana/commit/3375daed3b428bcc0c692dfdaa4ee828eb8f726c))
+* **reana-dev:** allow using Colima/K3s as an alternative to Kind ([#894](https://github.com/tiborsimko/reana/issues/894)) ([ad4cd09](https://github.com/tiborsimko/reana/commit/ad4cd09078b4f32907d1f22a1a7c86e013f96cde))
+* **reana-dev:** customize kind image version ([#811](https://github.com/tiborsimko/reana/issues/811)) ([fedc752](https://github.com/tiborsimko/reana/commit/fedc7522db83d15735b7caf0dbb88175639092a3))
+* **reana-dev:** enhance changelog aggregator for alpha releases ([#921](https://github.com/tiborsimko/reana/issues/921)) ([73027e0](https://github.com/tiborsimko/reana/commit/73027e03475211b3b9d15d76e0bacea01a2cac7e))
+* **reana-dev:** improve workflow testing in run-example command ([#817](https://github.com/tiborsimko/reana/issues/817)) ([72bd76b](https://github.com/tiborsimko/reana/commit/72bd76bb3f1e7d08338cafc72cb5863f7740ec92))
+* **reana-dev:** prevent Helm value string wrapping by PyYAML ([#827](https://github.com/tiborsimko/reana/issues/827)) ([467be7a](https://github.com/tiborsimko/reana/commit/467be7a232a48c3a60aa046bb966308cdffa3403))
+* **reana-dev:** update Dockerfile image.created label on release ([#917](https://github.com/tiborsimko/reana/issues/917)) ([57ab98f](https://github.com/tiborsimko/reana/commit/57ab98f9fb0e64e2c3a81bbf08cb10e957f6028f))
+* **reana-dev:** use Docker Buildx for multi-arch image releases ([#915](https://github.com/tiborsimko/reana/issues/915)) ([2e59c41](https://github.com/tiborsimko/reana/commit/2e59c41f9e610bdefe500fa4280799c05bc3db84))
+* **scripts:** upgrade to Jupyter SciPy 7.2.2 notebook ([#846](https://github.com/tiborsimko/reana/issues/846)) ([d9c375f](https://github.com/tiborsimko/reana/commit/d9c375fb479829a557f1828a6fcbd30f5a533e26))
+* **scripts:** upgrade to Jupyter SciPy 7.2.2 notebook ([#846](https://github.com/tiborsimko/reana/issues/846)) ([1ca9dea](https://github.com/tiborsimko/reana/commit/1ca9deaf1b73e18774019cf1e0cb5cc1fb1c3016))
+
+
+### Bug fixes
+
+* **helm:** add disabling of GitLab host via empty string ([#922](https://github.com/tiborsimko/reana/issues/922)) ([b182726](https://github.com/tiborsimko/reana/commit/b1827260c6f9aa71d968862d0a046d9574e8b246))
+* **helm:** add NodePort services for debugging ([#812](https://github.com/tiborsimko/reana/issues/812)) ([33359ca](https://github.com/tiborsimko/reana/commit/33359cad47070781a714ce4bdfebd433dbb35c7d))
+* **helm:** allow interactive-session-cleanup job to access RWC ([#820](https://github.com/tiborsimko/reana/issues/820)) ([a288636](https://github.com/tiborsimko/reana/commit/a288636f295e99d28b2d3e1b83095e0c5670d5f3))
+* **helm:** allow interactive-session-cleanup job to access RWC ([#853](https://github.com/tiborsimko/reana/issues/853)) ([d9c375f](https://github.com/tiborsimko/reana/commit/d9c375fb479829a557f1828a6fcbd30f5a533e26))
+* **helm:** allow interactive-session-cleanup job to access RWC ([#853](https://github.com/tiborsimko/reana/issues/853)) ([b9bc602](https://github.com/tiborsimko/reana/commit/b9bc602fc5be2ab717d2c09cb9018b6e5ca8180e))
+* **helm:** avoid redefining `REANA_OPENSEARCH_PASSWORD` ([#843](https://github.com/tiborsimko/reana/issues/843)) ([aad7dff](https://github.com/tiborsimko/reana/commit/aad7dff7359bacde79a67dab065add833bda567b))
+* **helm:** harmonise REANA host name and port configurations ([#867](https://github.com/tiborsimko/reana/issues/867)) ([8acfb28](https://github.com/tiborsimko/reana/commit/8acfb287b916602f8f8f1cedf5d112b545c17300)), closes [#865](https://github.com/tiborsimko/reana/issues/865)
+* **helm:** set `fsGroup` to zero for local OpenSearch deployment ([#843](https://github.com/tiborsimko/reana/issues/843)) ([b235782](https://github.com/tiborsimko/reana/commit/b235782db694699710c38ee756ed59349c15a02f))
+* **helm:** support OpenSearch deployment in non-default namespace ([#843](https://github.com/tiborsimko/reana/issues/843)) ([1895ac7](https://github.com/tiborsimko/reana/commit/1895ac7e874b9e076adde83f043dfa21743b1ec0))
+* **helm:** use ingressClassName instead of deprecated annotation ([#794](https://github.com/tiborsimko/reana/issues/794)) ([b4f4633](https://github.com/tiborsimko/reana/commit/b4f46334e79841a75bc4c35d84b5a90fbe31763a)), closes [#742](https://github.com/tiborsimko/reana/issues/742)
+* **reana-dev:** add PR number in commits bumping shared modules ([#783](https://github.com/tiborsimko/reana/issues/783)) ([57c6755](https://github.com/tiborsimko/reana/commit/57c67555e7e2055baeb2ebb6cd7bb0e4ba632a2c))
+* **reana-dev:** allow `root` group to write to shared storage ([#843](https://github.com/tiborsimko/reana/issues/843)) ([47c7a02](https://github.com/tiborsimko/reana/commit/47c7a0216fcac24ac80a707e458a6ad1ae437766))
+* **reana-dev:** correctly handle missing changelog of components ([#858](https://github.com/tiborsimko/reana/issues/858)) ([d9c375f](https://github.com/tiborsimko/reana/commit/d9c375fb479829a557f1828a6fcbd30f5a533e26))
+* **reana-dev:** correctly handle missing changelog of components ([#858](https://github.com/tiborsimko/reana/issues/858)) ([32549d1](https://github.com/tiborsimko/reana/commit/32549d1f4f1ce06d6be015721d8abc1598dba5b1)), closes [#857](https://github.com/tiborsimko/reana/issues/857)
+* **reana-dev:** create commits that conform to conventional style ([#777](https://github.com/tiborsimko/reana/issues/777)) ([86d0133](https://github.com/tiborsimko/reana/commit/86d01331877212baf2081dbddc37f3de20983b56))
+* **reana-dev:** delete extra files with git-submodule --update ([#764](https://github.com/tiborsimko/reana/issues/764)) ([e5680ce](https://github.com/tiborsimko/reana/commit/e5680ce8bd1a9f80dde4ca448f9fc8d21aa1c6ca))
+* **reana-dev:** detect number of already open PR in commit suffix ([#783](https://github.com/tiborsimko/reana/issues/783)) ([c533c34](https://github.com/tiborsimko/reana/commit/c533c34c85360cec0646f4318b1e6653407f6703))
+* **reana-dev:** improve component detection from subdirectories ([#910](https://github.com/tiborsimko/reana/issues/910)) ([471e5a3](https://github.com/tiborsimko/reana/commit/471e5a3b6278302a7a2c9d03ff6a512448d66dda))
+* **reana-dev:** update container image labels when releasing ([#765](https://github.com/tiborsimko/reana/issues/765)) ([fe6bc2c](https://github.com/tiborsimko/reana/commit/fe6bc2c397e4af2d873761001bfe485e819211be))
+* **reana-dev:** use chore commit scope when bumping dependencies ([#868](https://github.com/tiborsimko/reana/issues/868)) ([3788789](https://github.com/tiborsimko/reana/commit/378878948e1fa99e3f2e336cbf5d699753aaa08d))
+* **reana-dev:** use PEP440 version format for reana-client tags ([#920](https://github.com/tiborsimko/reana/issues/920)) ([17fd87d](https://github.com/tiborsimko/reana/commit/17fd87d0be04bd27fd65273b14cc5d2639b014d7))
+
+
+### Performance improvements
+
+* add locust performance stress tests ([5e5266f](https://github.com/tiborsimko/reana/commit/5e5266f69dbd719f943a1b2b74a2f4432c781a35))
+
+
+### Code refactoring
+
+* **docs:** move from reST to Markdown ([#776](https://github.com/tiborsimko/reana/issues/776)) ([79aedb9](https://github.com/tiborsimko/reana/commit/79aedb9ef2ba0c8a933fe2cac334bd51cd32dd85))
+
+
+### Code style
+
+* **black:** format with black v24 ([#772](https://github.com/tiborsimko/reana/issues/772)) ([311e157](https://github.com/tiborsimko/reana/commit/311e1573867b74d722e04835268d5686e5f64f15))
+* **python:** adapt code base to the new black version ([#921](https://github.com/tiborsimko/reana/issues/921)) ([ccd3077](https://github.com/tiborsimko/reana/commit/ccd307742be5c8635e36034ec8903208d60b3f7e))
+
+
+### Continuous integration
+
+* **actions:** update GitHub actions due to Node 16 deprecation ([#790](https://github.com/tiborsimko/reana/issues/790)) ([8ce4a8d](https://github.com/tiborsimko/reana/commit/8ce4a8de6a46d427ac134b22f69a295e878ffdd8))
+* added flake8 linter ([86e1c8b](https://github.com/tiborsimko/reana/commit/86e1c8baf63386e9dec216bccfe6a419b99dacca))
+* added github actions workflow ([4c4ee23](https://github.com/tiborsimko/reana/commit/4c4ee2387060f6c11e537dd76cafea4a04cd814c))
+* **commitlint:** addition of commit message linter ([#767](https://github.com/tiborsimko/reana/issues/767)) ([be77666](https://github.com/tiborsimko/reana/commit/be77666bb80601c0211674a59a3f91d2609712f9))
+* **commitlint:** allow release commit style ([#785](https://github.com/tiborsimko/reana/issues/785)) ([a6f95ac](https://github.com/tiborsimko/reana/commit/a6f95aca9ca1b3fb1663ee2fa7d876ff0da2bf02))
+* **commitlint:** check for the presence of concrete PR number ([#771](https://github.com/tiborsimko/reana/issues/771)) ([2c34634](https://github.com/tiborsimko/reana/commit/2c34634465723d1b9aa3858ce3898625f4ba572f))
+* **commitlint:** check PR number presence in merge commits ([#810](https://github.com/tiborsimko/reana/issues/810)) ([f1291ed](https://github.com/tiborsimko/reana/commit/f1291edf432a048e161d991fdbfc000f63af9b32))
+* **commitlint:** fix local running of commit linter on macOS ([#898](https://github.com/tiborsimko/reana/issues/898)) ([c48d92a](https://github.com/tiborsimko/reana/commit/c48d92a4e089f61f27302c16e3657a71146d34d7))
+* **commitlint:** improve checking of merge commits ([#803](https://github.com/tiborsimko/reana/issues/803)) ([16e5542](https://github.com/tiborsimko/reana/commit/16e55429a6d5d6d745bb563ed4d718b50ce7c0e5))
+* **helm:** configure target branch name for helm linting ([#863](https://github.com/tiborsimko/reana/issues/863)) ([e2b6037](https://github.com/tiborsimko/reana/commit/e2b603726ea37a946d0ec09999645861c9e75ce1))
+* **helm:** configure target branch name for helm linting ([#885](https://github.com/tiborsimko/reana/issues/885)) ([3375dae](https://github.com/tiborsimko/reana/commit/3375daed3b428bcc0c692dfdaa4ee828eb8f726c))
+* **helm:** configure target branch name for helm linting ([#885](https://github.com/tiborsimko/reana/issues/885)) ([823f9fc](https://github.com/tiborsimko/reana/commit/823f9fc80a880176dbbc52d6d3622fb3a12ded8e))
+* **jsonlint:** add JSON linting ([#838](https://github.com/tiborsimko/reana/issues/838)) ([430e2e4](https://github.com/tiborsimko/reana/commit/430e2e4db859d1af14aad976b7ebafa381aefb6e)), closes [#836](https://github.com/tiborsimko/reana/issues/836)
+* **markdownlint:** add Markdown linting ([#838](https://github.com/tiborsimko/reana/issues/838)) ([6a437e2](https://github.com/tiborsimko/reana/commit/6a437e230e1c2d12292727fc58c3cf9847f22ed0)), closes [#836](https://github.com/tiborsimko/reana/issues/836)
+* pin ubuntu version in GA jobs ([570cc1c](https://github.com/tiborsimko/reana/commit/570cc1cd3255ef63a3eaacfc7a9b1ac7aa793c77))
+* **prettier:** add Prettier code formatting checks ([#838](https://github.com/tiborsimko/reana/issues/838)) ([6ecf556](https://github.com/tiborsimko/reana/commit/6ecf556e9af135787b833b111be161a5c8a63198)), closes [#836](https://github.com/tiborsimko/reana/issues/836)
+* **prettier:** format more Helm-related files ([#838](https://github.com/tiborsimko/reana/issues/838)) ([4b8edd0](https://github.com/tiborsimko/reana/commit/4b8edd09addc4e803a5b7e998cdca7845872de9b)), closes [#836](https://github.com/tiborsimko/reana/issues/836)
+* **pytest:** invoke `pytest` directly instead of `setup.py test` ([#815](https://github.com/tiborsimko/reana/issues/815)) ([a29f469](https://github.com/tiborsimko/reana/commit/a29f4692fbb0244956a5055f18990e6c76bc6f4d))
+* **python:** pin setuptools 70 ([#822](https://github.com/tiborsimko/reana/issues/822)) ([be45c54](https://github.com/tiborsimko/reana/commit/be45c549c057ea2356b2f6688dd142c68ea11d44))
+* **release-please:** initial configuration ([#767](https://github.com/tiborsimko/reana/issues/767)) ([bb45539](https://github.com/tiborsimko/reana/commit/bb455393ac1b4d149cfef4df6e96ae730c25501c))
+* **release-please:** update version in Helm Chart ([#770](https://github.com/tiborsimko/reana/issues/770)) ([09c9210](https://github.com/tiborsimko/reana/commit/09c9210d68e29d094c0e76a4002b17a21fcda701))
+* **runners:** upgrade CI runners to Ubuntu 22.04 ([#890](https://github.com/tiborsimko/reana/issues/890)) ([3375dae](https://github.com/tiborsimko/reana/commit/3375daed3b428bcc0c692dfdaa4ee828eb8f726c))
+* **runners:** upgrade CI runners to Ubuntu 22.04 ([#890](https://github.com/tiborsimko/reana/issues/890)) ([dc0cad7](https://github.com/tiborsimko/reana/commit/dc0cad72aad4fc668beabc67ba57db7901c5e639))
+* **shellcheck:** fix exit code propagation ([#771](https://github.com/tiborsimko/reana/issues/771)) ([035d51c](https://github.com/tiborsimko/reana/commit/035d51ca95dbab1c225316667ea2d199d924c851))
+* **shfmt:** add shfmt code formatting checks ([#838](https://github.com/tiborsimko/reana/issues/838)) ([a9abb0b](https://github.com/tiborsimko/reana/commit/a9abb0b262d7df7adf77434984445c63d9962758)), closes [#836](https://github.com/tiborsimko/reana/issues/836)
+* update all actions ([e59b982](https://github.com/tiborsimko/reana/commit/e59b98288b2d98855ca1ef9bd05d5d3af483b419))
+* **yamllint:** add YAML linting ([#838](https://github.com/tiborsimko/reana/issues/838)) ([ad4d5ab](https://github.com/tiborsimko/reana/commit/ad4d5abe36486e251e3ff3b1e608422215bfcf83)), closes [#836](https://github.com/tiborsimko/reana/issues/836)
+
+
+### Documentation
+
+* add .readthedocs.yaml to migrate to RTD v2 ([5706804](https://github.com/tiborsimko/reana/commit/5706804d1886711ac4c686d6dac2d3fe1aa2affe))
+* **authors:** add Jelizaveta Lemeševa ([#812](https://github.com/tiborsimko/reana/issues/812)) ([9698c63](https://github.com/tiborsimko/reana/commit/9698c63e28d15fac0621639d6155d65efebc06f8))
+* **authors:** complete list of contributors ([#779](https://github.com/tiborsimko/reana/issues/779)) ([123eae8](https://github.com/tiborsimko/reana/commit/123eae8d4d97846f895ba652bdf30df35dcd7c00))
+* **chat:** remove Gitter ([#782](https://github.com/tiborsimko/reana/issues/782)) ([aba8ac2](https://github.com/tiborsimko/reana/commit/aba8ac2ae1b5cee0a8970edb2c85453657deb159))
+* downgrade urllib3 ([37b9f2d](https://github.com/tiborsimko/reana/commit/37b9f2d76242b471ba5cf92d15d56f47e83bcccf))
+* fix deployment links ([d2b16b2](https://github.com/tiborsimko/reana/commit/d2b16b2dced2a7fcbdff013f0491cc84b4834a0e))
+* **helm:** clarify secrets-related warning in README ([#847](https://github.com/tiborsimko/reana/issues/847)) ([d9c375f](https://github.com/tiborsimko/reana/commit/d9c375fb479829a557f1828a6fcbd30f5a533e26))
+* **helm:** clarify secrets-related warning in README ([#847](https://github.com/tiborsimko/reana/issues/847)) ([fab5591](https://github.com/tiborsimko/reana/commit/fab559187a49c21d368c4863cd0a888ff831c330))
+* move releasing docs to docs.reana.io ([080898f](https://github.com/tiborsimko/reana/commit/080898ffc13a1edf3d0d3ec7c7e9599c53bbf369))
+* move to docs.reana.io enrich README ([9abd6ff](https://github.com/tiborsimko/reana/commit/9abd6ffe94008020173de153786adb8039d2de44))
+* revert deletion of docs/requirements.txt ([c4912ec](https://github.com/tiborsimko/reana/commit/c4912ec0e8af241250ffcacc57dcf85cd6505497))
+* set default language to English ([ff110ba](https://github.com/tiborsimko/reana/commit/ff110ba72e8cc76fad44c8df241e956b5126a685))
+* update changelog ([c65f9c9](https://github.com/tiborsimko/reana/commit/c65f9c90061477423dc3eb897a274c43a42002ef))
+
+
+### Chores
+
+* **master:** release 0.95.0-alpha.1 ([251a172](https://github.com/tiborsimko/reana/commit/251a172977e0eb666d4335809ef43ca692fcfeab))
+
 ## [0.9.4](https://github.com/reanahub/reana/compare/0.9.3...0.9.4) (2024-12-16)
 
 ### :sparkles: What's new in REANA 0.9.4
