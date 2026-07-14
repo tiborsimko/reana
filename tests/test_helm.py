@@ -23,12 +23,16 @@ HELM_TEST_SECRETS = {
     "message_broker": {"user": "test", "password": "test"},
     "reana": {"REANA_SECRET_KEY": "test"},
 }
+HELM_TEST_AUTH = {
+    "issuer": "https://issuer.example.org",
+    "bffEnabled": False,
+}
 
 
 def _render_helm_chart(tmp_path, values=None, namespace="default", check=True):
     """Render the REANA Helm chart with common test secrets."""
     values_file = tmp_path / "values.yaml"
-    chart_values = {"secrets": HELM_TEST_SECRETS}
+    chart_values = {"auth": HELM_TEST_AUTH, "secrets": HELM_TEST_SECRETS}
     chart_values.update(values or {})
     values_file.write_text(yaml.safe_dump(chart_values))
 
@@ -103,6 +107,7 @@ def test_nginx_config_quoted_origins(tmp_path):
     values_file.write_text(
         yaml.dump(
             {
+                "auth": HELM_TEST_AUTH,
                 "components": {
                     "reana_ui": {
                         "nginx": {
@@ -184,6 +189,7 @@ def test_job_controller_receives_vetted_container_images(
     values_file.write_text(
         yaml.dump(
             {
+                "auth": HELM_TEST_AUTH,
                 "components": {
                     "reana_job_controller": {
                         "environment": job_controller_environment,
@@ -312,17 +318,18 @@ def test_runtime_namespace_renders_static_cephfs_resources(tmp_path, shared_stor
         and document["metadata"]["name"].endswith("-krb5-conf")
         for document in documents
     )
-    deployment_binding = next(
+    runtime_worker_binding = next(
         document
         for document in documents
-        if document["kind"] == "ClusterRoleBinding"
-        and document["metadata"]["name"].endswith("-manage-deployments")
+        if document["kind"] == "RoleBinding"
+        and document["metadata"]["name"].endswith("-runtime-worker")
     )
+    assert runtime_worker_binding["metadata"]["namespace"] == "runtime"
     assert {
         "kind": "ServiceAccount",
         "name": runtime_service_account["metadata"]["name"],
         "namespace": "runtime",
-    } in deployment_binding["subjects"]
+    } in runtime_worker_binding["subjects"]
 
 
 def test_workflow_validator_environment_and_network_policy_rbac(tmp_path):
@@ -331,6 +338,7 @@ def test_workflow_validator_environment_and_network_policy_rbac(tmp_path):
     values_file.write_text(
         yaml.dump(
             {
+                "auth": HELM_TEST_AUTH,
                 "components": {
                     "reana_workflow_validator": {
                         "environment": {
@@ -463,7 +471,7 @@ def test_runtime_namespace_hostpath_does_not_create_pvc(tmp_path):
 def test_runtime_namespace_disabled_does_not_create_resources(
     tmp_path, namespace_runtime
 ):
-    """An unset or same-as-release value should not duplicate resources."""
+    """An unset or same-as-release value should not duplicate namespaced resources."""
     values = {}
     if namespace_runtime:
         values["namespace_runtime"] = namespace_runtime
@@ -479,11 +487,16 @@ def test_runtime_namespace_disabled_does_not_create_resources(
         and document["metadata"]["name"] == "infrastructure"
         for document in documents
     )
-    assert not any(
-        document["kind"] == "ServiceAccount"
-        and document["metadata"]["name"].endswith("-runtime")
+    # The runtime ServiceAccount is always created (PR976-17), but without a
+    # dedicated namespace it must land alongside infrastructure, not in a
+    # duplicated one.
+    runtime_service_account = next(
+        document
         for document in documents
+        if document["kind"] == "ServiceAccount"
+        and document["metadata"]["name"].endswith("-runtime")
     )
+    assert runtime_service_account["metadata"]["namespace"] == "infrastructure"
 
 
 @pytest.mark.skipif(
@@ -614,6 +627,10 @@ def test_workflow_validator_reserved_environment_is_rejected():
             str(HELM_CHART),
             "--set",
             "components.reana_workflow_validator.environment.PYTHONPATH=/tmp/inject",
+            "--set",
+            "auth.issuer=https://issuer.example.org",
+            "--set",
+            "auth.bffEnabled=false",
         ],
         capture_output=True,
         text=True,

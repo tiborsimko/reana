@@ -10,6 +10,7 @@
 
 import os
 import re
+import shlex
 import shutil
 import subprocess
 import sys
@@ -453,9 +454,14 @@ def run_ci(
         cmd += " -j {}".format(job_mount)
     run_command(cmd, "reana")
     # run demo examples
+    display_message(
+        f"Deployment ready. If a browser window opens asking you to "
+        f"authenticate, please log in as {admin_email}.",
+        component="reana",
+    )
     cmd = (
         f"eval $(reana-dev client-setup-environment --server-hostname "
-        f"https://localhost:{hostport} -n {namespace}) && "
+        f"https://localhost:{hostport}) && "
         f"reana-dev run-example --client {client_flavour}"
     )
     for component in components:
@@ -463,6 +469,110 @@ def run_ci(
     for a_workflow_engine in workflow_engine:
         cmd += " -w {}".format(a_workflow_engine)
     run_command(cmd, "reana")
+
+
+def ensure_client_login(client_executable):
+    """Ensure the client is authenticated against REANA_SERVER_URL.
+
+    Probe the server with an authenticated ``ping``. When the probe fails on
+    an interactive terminal, start the client's OIDC login and continue only
+    after a confirming ping, so that examples only run with working
+    credentials. A working ``REANA_ACCESS_TOKEN`` passes the probe untouched;
+    a failing one is dropped from this process's environment only, and only
+    after explicit confirmation, since the probe failure may have another
+    cause and the token may name a deliberately selected identity.
+    """
+    server_url = os.environ.get("REANA_SERVER_URL")
+    if not server_url:
+        click.secho(
+            "[ERROR] REANA_SERVER_URL is not set. Please run "
+            '`eval "$(reana-dev client-setup-environment)"` first.',
+            fg="red",
+        )
+        sys.exit(1)
+
+    def ping():
+        return subprocess.run(
+            [client_executable, "ping"], capture_output=True, text=True
+        )
+
+    def diagnostic(probe):
+        return "\n".join(
+            stream.strip() for stream in (probe.stdout, probe.stderr) if stream.strip()
+        )
+
+    probe = ping()
+    if probe.returncode == 0:
+        return
+
+    token_is_set = bool(os.environ.get("REANA_ACCESS_TOKEN"))
+    rerun_command = " ".join(
+        shlex.quote(argument)
+        for argument in [os.path.basename(sys.argv[0]), *sys.argv[1:]]
+    )
+    # Pin the selected server into the re-run: within run-ci this variable
+    # only exists in an intermediate shell, so a re-run from the parent
+    # shell would otherwise lack it or inherit a different server.
+    rerun_command = f"REANA_SERVER_URL={shlex.quote(server_url)} {rerun_command}"
+    if token_is_set:
+        # The exported token overrides login credentials, so a plain re-run
+        # would keep failing even after a successful login.
+        rerun_command = f"env -u REANA_ACCESS_TOKEN {rerun_command}"
+    resume_hint = (
+        f"To resume without rebuilding, run:\n"
+        f"  $ {client_executable} login --server-url {shlex.quote(server_url)}\n"
+        f"  $ {rerun_command}\n"
+        f"Add `--headless` to the login on machines without a browser."
+    )
+
+    def abort(message, probe_result=None):
+        if probe_result is not None:
+            display_message(diagnostic(probe_result), component="reana")
+        click.secho(f"[ERROR] {message}\n{resume_hint}", fg="red")
+        sys.exit(1)
+
+    if not (sys.stdin.isatty() and sys.stdout.isatty()):
+        abort(
+            f"Client is not authenticated against {server_url} and no "
+            f"interactive terminal is available to start a login.",
+            probe_result=probe,
+        )
+    if token_is_set:
+        display_message(
+            f"REANA_ACCESS_TOKEN is set and overrides login credentials, "
+            f"but it did not authenticate against {server_url}:\n"
+            f"{diagnostic(probe)}\n"
+            f"Note that the failure may also have another cause, such as "
+            f"the server being unavailable.",
+            component="reana",
+        )
+        if not click.confirm(
+            "Drop REANA_ACCESS_TOKEN for this run and use login credentials "
+            "instead? (Your shell environment is not affected.)",
+            default=True,
+        ):
+            abort("Keeping REANA_ACCESS_TOKEN as requested.")
+        os.environ.pop("REANA_ACCESS_TOKEN")
+    else:
+        display_message(
+            f"Client is not authenticated against {server_url}.",
+            component="reana",
+        )
+    display_message(
+        f"Starting `{client_executable} login`; please authenticate.",
+        component="reana",
+    )
+    login = subprocess.run([client_executable, "login", "--server-url", server_url])
+    if login.returncode != 0:
+        abort("Login did not succeed.")
+    confirmation = ping()
+    if confirmation.returncode != 0:
+        abort(
+            f"Logged in to {server_url}, but the server still rejects "
+            f"requests; see the diagnostic above.",
+            probe_result=confirmation,
+        )
+    display_message(f"Logged in to {server_url}.", component="reana")
 
 
 @click.option(
@@ -602,6 +712,8 @@ def run_example(  # noqa: C901
             fg="red",
         )
         sys.exit(1)
+
+    ensure_client_login(client_executable)
 
     components = sorted(select_components(component))
     workflow_engines = sorted(select_workflow_engines(workflow_engine))
