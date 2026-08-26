@@ -11,10 +11,14 @@
 from __future__ import absolute_import, print_function
 
 import os
-import pytest
+from pathlib import Path
+import sys
+from unittest.mock import call, patch
+
 import click
 from click.testing import CliRunner
-from unittest.mock import patch
+import pytest
+
 from reana.reana_dev.cli import reana_dev
 
 
@@ -32,23 +36,28 @@ def test_shorten_component_name():
 
 def run_command_possibilities(command, component, return_output=False):
     """Possible return values for run_command."""
-    if "reana-client test" in command and "cwl" in command:
+    if " test -w " in command and "cwl" in command:
         return """
         ==> Testing file "tests/cwl/log-messages.feature"...
           -> ERROR: Scenario "-> SUCCESS: Writing SUCCESS in the scenario name should make no difference"
           -> SUCCESS: Scenario "If one scenario fails, the whole test should fail"
         """
-    elif "reana-client test" in command:
+    elif " test -w " in command:
         return """
         ==> Testing file "tests/yadage/log-messages.feature"...
           -> SUCCESS: Scenario "-> ERROR: Writing ERROR in the scenario name should make no difference"
           -> SUCCESS: Scenario "If a different test fails, this one shouldn't"
         """
-    elif "reana-client status" in command:
+    elif " status -w " in command:
         return "finished"
     return ""
 
 
+@pytest.mark.parametrize(
+    ("client_flavour", "client_executable"),
+    (("python", "reana-client"), ("go", "reana-client-go")),
+)
+@patch("reana.reana_dev.run.shutil.which", return_value="/fake/client")
 @patch(
     "reana.reana_dev.run.run_command",
     side_effect=lambda command, component, return_output=False: (
@@ -56,21 +65,30 @@ def run_command_possibilities(command, component, return_output=False):
         ==> Testing file "tests/cwl/log-messages.feature"...
           -> SUCCESS: Scenario "-> ERROR: Writing ERROR in the scenario name should make no difference"
         """
-        if "reana-client test" in command
-        else "finished" if "reana-client status" in command else ""
+        if " test -w " in command
+        else "finished" if " status -w " in command else ""
     ),
 )
 @patch(
     "reana.reana_dev.run.get_example_reana_yaml_file_path",
 )
 def test_run_example_check_only_passes(
-    mock_get_example_reana_yaml_file_path, mock_run_command, tmp_path
+    mock_get_example_reana_yaml_file_path,
+    mock_run_command,
+    mock_which,
+    tmp_path,
+    client_flavour,
+    client_executable,
 ):
     """Tests for run-example command with check-only flag, when all tests pass."""
     yaml_file = tmp_path / "reana-cwl.yaml"
     yaml_file.write_text("tests:\n  files:\n    - {file: output.txt}\n")
     mock_get_example_reana_yaml_file_path.return_value = str(yaml_file)
-    env = {"REANA_SERVER_URL": "localhost"}
+    other_client = "go" if client_flavour == "python" else "python"
+    env = {
+        "REANA_SERVER_URL": "localhost",
+        "REANA_DEV_CLIENT": other_client,
+    }
     runner = CliRunner(env=env)
     with runner.isolation():
         result = runner.invoke(
@@ -82,13 +100,20 @@ def test_run_example_check_only_passes(
                 "-w",
                 "cwl",
                 "--check-only",
+                "--client",
+                client_flavour,
             ],
         )
         assert "1 passed" in result.output
         assert "0 failed" in result.output
         assert result.exit_code == 0
+        assert any(
+            f"{client_executable} status" in invocation.args[0]
+            for invocation in mock_run_command.call_args_list
+        )
 
 
+@patch("reana.reana_dev.run.shutil.which", return_value="/fake/client")
 @patch(
     "reana.reana_dev.run.run_command",
     side_effect=run_command_possibilities,
@@ -97,7 +122,7 @@ def test_run_example_check_only_passes(
     "reana.reana_dev.run.get_example_reana_yaml_file_path",
 )
 def test_run_example_check_only_one_fail_one_pass(
-    mock_get_example_reana_yaml_file_path, mock_run_command, tmp_path
+    mock_get_example_reana_yaml_file_path, mock_run_command, mock_which, tmp_path
 ):
     """Test for run-example command with check-only flag, and where one example fails and one passes."""
     cwl_yaml = tmp_path / "reana-cwl.yaml"
@@ -130,15 +155,16 @@ def test_run_example_check_only_one_fail_one_pass(
         assert "1 failed: root6-roofit-cwl-kubernetes" in result.output
 
 
+@patch("reana.reana_dev.run.shutil.which", return_value="/fake/client")
 @patch(
     "reana.reana_dev.run.run_command",
     side_effect=lambda command, component, return_output=False: (
         "1"
-        if "reana-client logs" in command
+        if " logs -w " in command
         else (
             "bmass.png\njpsimass.png"
-            if "reana-client ls" in command
-            else "finished" if "reana-client status" in command else ""
+            if " ls -w " in command
+            else "finished" if " status -w " in command else ""
         )
     ),
 )
@@ -146,7 +172,7 @@ def test_run_example_check_only_one_fail_one_pass(
     "reana.reana_dev.run.get_example_reana_yaml_file_path",
 )
 def test_run_example_check_only_without_gherkin_tests(
-    mock_get_example_reana_yaml_file_path, mock_run_command, tmp_path
+    mock_get_example_reana_yaml_file_path, mock_run_command, mock_which, tmp_path
 ):
     """Tests for run-example command with check-only flag for examples without Gherkin tests."""
     yaml_file = tmp_path / "reana.yaml"
@@ -169,6 +195,235 @@ def test_run_example_check_only_without_gherkin_tests(
         assert "1 passed" in result.output
         assert "0 failed" in result.output
         assert result.exit_code == 0
+
+
+def _create_client_source_directories(tmp_path):
+    """Create minimal Python and Go client source directories."""
+    from reana.config import REPO_LIST_CLIENT
+
+    source_directories = {}
+    for component in REPO_LIST_CLIENT:
+        source_directory = tmp_path / component
+        source_directory.mkdir()
+        source_directories[component] = source_directory
+        if component == "reana-client-go":
+            (source_directory / "go.mod").write_text("module example.org/client\n")
+        else:
+            (source_directory / "setup.py").write_text("")
+    return source_directories
+
+
+def test_client_install_builds_both_clients(tmp_path):
+    """Test that client-install installs Python packages and builds Go."""
+    from reana.config import REPO_LIST_CLIENT
+
+    source_directories = _create_client_source_directories(tmp_path)
+    scripts_dir = tmp_path / "bin"
+    scripts_dir.mkdir()
+
+    def get_srcdir(component):
+        return str(source_directories[component])
+
+    with patch("reana.reana_dev.client.get_srcdir", side_effect=get_srcdir), patch(
+        "reana.reana_dev.client.get_scripts_dir", return_value=scripts_dir
+    ), patch("reana.reana_dev.client.shutil.which", return_value="/usr/bin/go"), patch(
+        "reana.reana_dev.client.run_command"
+    ) as mock_run_command:
+        result = CliRunner().invoke(reana_dev, ["client-install"])
+
+    python_paths = [
+        str(source_directories[component])
+        for component in REPO_LIST_CLIENT
+        if component != "reana-client-go"
+    ]
+    go_executable = scripts_dir / "reana-client-go"
+    assert result.exit_code == 0
+    assert mock_run_command.call_args_list == [
+        call(
+            [sys.executable, "-m", "pip", "install", "--upgrade", *python_paths],
+            "reana",
+        ),
+        call([sys.executable, "-m", "pip", "check"], "reana"),
+        call(
+            ["make", "install", f"BINDIR={scripts_dir}"],
+            "reana-client-go",
+        ),
+        call([str(go_executable), "version"], "reana-client-go"),
+    ]
+
+
+@pytest.mark.parametrize("missing_executable", ("go", "make"))
+def test_client_install_requires_build_tools(tmp_path, missing_executable):
+    """Test that client-install validates build tools before installing."""
+    source_directories = _create_client_source_directories(tmp_path)
+    scripts_dir = tmp_path / "bin"
+    scripts_dir.mkdir()
+
+    def find_executable(executable):
+        return None if executable == missing_executable else f"/usr/bin/{executable}"
+
+    with patch(
+        "reana.reana_dev.client.get_srcdir",
+        side_effect=lambda component: str(source_directories[component]),
+    ), patch("reana.reana_dev.client.get_scripts_dir", return_value=scripts_dir), patch(
+        "reana.reana_dev.client.shutil.which", side_effect=find_executable
+    ), patch(
+        "reana.reana_dev.client.run_command"
+    ) as mock_run_command:
+        result = CliRunner().invoke(reana_dev, ["client-install"])
+
+    assert result.exit_code == 1
+    assert f"The `{missing_executable}` executable was not found" in result.output
+    mock_run_command.assert_not_called()
+
+
+def test_client_uninstall_removes_both_clients(tmp_path):
+    """Test that client-uninstall removes Python packages and the Go binary."""
+    from reana.config import REPO_LIST_CLIENT
+
+    source_directories = _create_client_source_directories(tmp_path)
+    scripts_dir = tmp_path / "bin"
+    scripts_dir.mkdir()
+
+    with patch(
+        "reana.reana_dev.client.get_srcdir",
+        side_effect=lambda component: str(source_directories[component]),
+    ), patch("reana.reana_dev.client.get_scripts_dir", return_value=scripts_dir), patch(
+        "reana.reana_dev.client.shutil.which", return_value="/usr/bin/make"
+    ), patch(
+        "reana.reana_dev.client.run_command"
+    ) as mock_run_command:
+        result = CliRunner().invoke(reana_dev, ["client-uninstall"])
+
+    python_components = [
+        component for component in REPO_LIST_CLIENT if component != "reana-client-go"
+    ]
+    assert result.exit_code == 0
+    assert mock_run_command.call_args_list == [
+        call(
+            [
+                sys.executable,
+                "-m",
+                "pip",
+                "uninstall",
+                "-y",
+                *python_components,
+            ],
+            "reana",
+        ),
+        call([sys.executable, "-m", "pip", "check"], "reana"),
+        call(
+            ["make", "uninstall", f"BINDIR={scripts_dir}"],
+            "reana-client-go",
+        ),
+    ]
+
+
+def test_client_uninstall_validates_environment_before_changes():
+    """Test that client-uninstall validates its environment before changes."""
+    with patch.object(sys, "prefix", "/usr"), patch.object(
+        sys, "base_prefix", "/usr"
+    ), patch("reana.reana_dev.client.run_command") as mock_run_command:
+        result = CliRunner().invoke(reana_dev, ["client-uninstall"])
+
+    assert result.exit_code == 1
+    assert "not running inside a virtual environment" in result.output
+    mock_run_command.assert_not_called()
+
+
+def test_client_uninstall_requires_make_before_changes(tmp_path):
+    """Test that client-uninstall validates make before package removal."""
+    source_directories = _create_client_source_directories(tmp_path)
+
+    with patch(
+        "reana.reana_dev.client.get_srcdir",
+        side_effect=lambda component: str(source_directories[component]),
+    ), patch(
+        "reana.reana_dev.client.get_scripts_dir", return_value=tmp_path / "bin"
+    ), patch(
+        "reana.reana_dev.client.shutil.which", return_value=None
+    ), patch(
+        "reana.reana_dev.client.run_command"
+    ) as mock_run_command:
+        result = CliRunner().invoke(reana_dev, ["client-uninstall"])
+
+    assert result.exit_code == 1
+    assert "The `make` executable was not found" in result.output
+    mock_run_command.assert_not_called()
+
+
+def test_client_uninstall_requires_checked_out_components(tmp_path):
+    """Test that client-uninstall does not silently skip missing sources."""
+    source_directories = _create_client_source_directories(tmp_path)
+    missing_component = "reana-client"
+    (source_directories[missing_component] / "setup.py").unlink()
+    source_directories[missing_component].rmdir()
+
+    with patch(
+        "reana.reana_dev.client.get_srcdir",
+        side_effect=lambda component: str(source_directories[component]),
+    ), patch(
+        "reana.reana_dev.client.get_scripts_dir", return_value=tmp_path / "bin"
+    ), patch(
+        "reana.reana_dev.client.run_command"
+    ) as mock_run_command:
+        result = CliRunner().invoke(reana_dev, ["client-uninstall"])
+
+    assert result.exit_code == 1
+    assert f"Expected client component '{missing_component}'" in result.output
+    mock_run_command.assert_not_called()
+
+
+def test_get_scripts_dir_uses_running_environment():
+    """Test scripts-directory lookup without relying on VIRTUAL_ENV."""
+    from reana.reana_dev.client import get_scripts_dir
+
+    with patch.object(sys, "prefix", "/virtualenv"), patch.object(
+        sys, "base_prefix", "/usr"
+    ), patch(
+        "reana.reana_dev.client.sysconfig.get_path", return_value="/virtualenv/bin"
+    ):
+        assert get_scripts_dir() == Path("/virtualenv/bin")
+
+
+def test_run_example_rejects_unknown_client_environment_value():
+    """Test strict validation of REANA_DEV_CLIENT."""
+    result = CliRunner().invoke(
+        reana_dev,
+        ["run-example"],
+        env={"REANA_DEV_CLIENT": "gopher"},
+    )
+
+    assert result.exit_code == 2
+    assert "Invalid value for '--client'" in result.output
+
+
+@patch("reana.reana_dev.run.run_command")
+@patch("reana.reana_dev.run.select_components", return_value=[])
+@patch("reana.reana_dev.run.is_cluster_created", return_value=True)
+def test_run_ci_propagates_client_flavour(
+    mock_is_cluster_created, mock_select_components, mock_run_command
+):
+    """Test that run-ci selects the client used by nested run-example."""
+    result = CliRunner().invoke(
+        reana_dev,
+        [
+            "run-ci",
+            "--mode",
+            "releasehelm",
+            "--admin-email",
+            "john.doe@example.org",
+            "--admin-password",
+            "secret",
+            "--client",
+            "go",
+        ],
+    )
+
+    commands = [invocation.args[0] for invocation in mock_run_command.call_args_list]
+    assert result.exit_code == 0
+    assert "reana-dev client-install" in commands
+    assert any("reana-dev run-example --client go" in command for command in commands)
 
 
 def test_is_component_python_package():

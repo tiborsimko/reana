@@ -12,13 +12,16 @@ import base64
 import json
 import logging
 import os
+from pathlib import Path
+import shutil
 import subprocess
 import sys
+import sysconfig
 import traceback
 
 import click
 
-from reana.config import REPO_LIST_CLIENT
+from reana.config import CLIENT_FLAVOUR_EXECUTABLES, REPO_LIST_CLIENT
 from reana.reana_dev.utils import get_srcdir, run_command
 
 
@@ -27,16 +30,25 @@ def client_commands():
     """Client commands group."""
 
 
-@client_commands.command(name="client-install")
-def client_install():  # noqa: D301
-    """Install latest REANA client and its dependencies.
+def get_scripts_dir():
+    """Return the scripts directory of the environment running ``reana-dev``."""
+    if sys.prefix == sys.base_prefix:
+        click.secho(
+            "[ERROR] `reana-dev` is not running inside a virtual environment. "
+            "Please activate the `reana` virtual environment first.",
+            fg="red",
+        )
+        sys.exit(1)
+    return Path(sysconfig.get_path("scripts"))
 
-    All components are installed in a single pip invocation so that
-    pip can resolve version constraints from all local source
-    directories together, avoiding conflicts when local branches
-    have different dependency pins than published PyPI versions.
-    """
-    paths = []
+
+def is_component_go_package(component):
+    """Return whether the component is a Go package."""
+    return os.path.exists(os.path.join(get_srcdir(component), "go.mod"))
+
+
+def _ensure_client_components_checked_out():
+    """Exit if an expected client component is not checked out."""
     for component in REPO_LIST_CLIENT:
         srcdir = get_srcdir(component)
         if not os.path.isdir(srcdir):
@@ -46,22 +58,89 @@ def client_install():  # noqa: D301
                 fg="red",
             )
             sys.exit(1)
+
+
+def _require_executable(executable, action):
+    """Exit if an executable required for a client action is unavailable."""
+    if not shutil.which(executable):
+        click.secho(
+            f"[ERROR] The `{executable}` executable was not found, cannot "
+            f"{action} the Go client.",
+            fg="red",
+        )
+        sys.exit(1)
+
+
+def _get_python_client_components():
+    """Return checked-out client components containing Python packages."""
+    components = []
+    for component in REPO_LIST_CLIENT:
+        srcdir = get_srcdir(component)
         if os.path.exists(os.path.join(srcdir, "setup.py")) or os.path.exists(
             os.path.join(srcdir, "pyproject.toml")
         ):
-            paths.append(srcdir)
+            components.append(component)
+    return components
+
+
+def _install_go_clients(scripts_dir):
+    """Install checked-out Go clients into the current scripts directory."""
+    for component in REPO_LIST_CLIENT:
+        if is_component_go_package(component):
+            executable = scripts_dir / CLIENT_FLAVOUR_EXECUTABLES["go"]
+            run_command(
+                ["make", "install", f"BINDIR={scripts_dir}"],
+                component,
+            )
+            run_command([str(executable), "version"], component)
+
+
+@client_commands.command(name="client-install")
+def client_install():  # noqa: D301
+    """Install latest REANA command line clients and their dependencies.
+
+    Python components are installed in a single pip invocation so that
+    pip can resolve version constraints from all local source
+    directories together, avoiding conflicts when local branches
+    have different dependency pins than published PyPI versions. The Go
+    client is built into the current virtual environment's scripts directory.
+    """
+    scripts_dir = get_scripts_dir()
+    _ensure_client_components_checked_out()
+    _require_executable("go", "install")
+    _require_executable("make", "install")
+
+    paths = [get_srcdir(component) for component in _get_python_client_components()]
     if paths:
-        cmd = "pip install --upgrade " + " ".join(paths)
-        run_command(cmd, "reana")
-    run_command("pip check", "reana")
+        run_command(
+            [sys.executable, "-m", "pip", "install", "--upgrade", *paths],
+            "reana",
+        )
+    run_command([sys.executable, "-m", "pip", "check"], "reana")
+    _install_go_clients(scripts_dir)
 
 
 @client_commands.command(name="client-uninstall")
 def client_uninstall():  # noqa: D301
-    """Uninstall REANA client and its dependencies."""
-    cmd = "pip uninstall -y " + " ".join(REPO_LIST_CLIENT)
-    run_command(cmd, "reana")
-    run_command("pip check", "reana")
+    """Uninstall REANA command line clients and their dependencies."""
+    scripts_dir = get_scripts_dir()
+    _ensure_client_components_checked_out()
+    _require_executable("make", "uninstall")
+
+    python_components = _get_python_client_components()
+    if python_components:
+        run_command(
+            [sys.executable, "-m", "pip", "uninstall", "-y", *python_components],
+            "reana",
+        )
+    run_command([sys.executable, "-m", "pip", "check"], "reana")
+
+    for component in REPO_LIST_CLIENT:
+        if is_component_go_package(component):
+            run_command(
+                ["make", "uninstall", f"BINDIR={scripts_dir}"],
+                component,
+            )
 
 
 @client_commands.command(name="client-setup-environment")
