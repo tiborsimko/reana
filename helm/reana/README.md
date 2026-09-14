@@ -56,12 +56,20 @@ On every Helm install or upgrade, a bounded post-deployment job reapplies the
 bundled realm roles, protocol mappers, redirect URLs, audience, and client
 credentials with Keycloak's partial-import overwrite policy. This keeps a
 persistent realm aligned with chart values; Keycloak's startup import alone only
-creates realms that do not already exist. Keep the bootstrap administrator
-Secret stable so that subsequent chart upgrades can authenticate this job. The
-same reconciliation makes `offline_access` a default realm role: the Python and
-Go CLI clients request that optional scope so persisted logins can refresh after
-the ordinary SSO session expires. The separate configured `required_role` still
-controls whether a Keycloak identity may access REANA.
+creates realms that do not already exist.
+
+Keep the bootstrap administrator Secret stable so that subsequent chart upgrades
+can authenticate this job. Changing `keycloak.admin_password` updates the
+Secret; it does not rotate the password in an existing Keycloak database or
+trigger a Pod restart. This restriction applies to all database modes. To reset
+an ephemeral development instance with a new bootstrap password, explicitly
+recreate its Pod after updating the Secret; this discards its existing
+identities and signing state.
+
+The same reconciliation makes `offline_access` a default realm role: the Python
+and Go CLI clients request that optional scope so persisted logins can refresh
+after the ordinary SSO session expires. The separate configured `required_role`
+still controls whether a Keycloak identity may access REANA.
 
 ## Custom Jupyter images
 
