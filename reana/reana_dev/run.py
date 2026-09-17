@@ -16,6 +16,7 @@ import subprocess
 import sys
 import time
 from typing import List
+from urllib.parse import urlsplit, urlunsplit
 
 import yaml
 
@@ -385,7 +386,7 @@ def run_ci(
        $ reana-dev cluster-undeploy
        $ reana-dev cluster-build
        $ reana-dev cluster-deploy
-       $ eval "$(reana-dev client-setup-environment)" && reana-dev run-example --client CLIENT
+       $ reana-dev run-example --client CLIENT --server https://localhost:30443 --no-tls-verify
 
     in the appropriate order and with the appropriate mounting or debugging
     arguments.
@@ -460,9 +461,8 @@ def run_ci(
         component="reana",
     )
     cmd = (
-        f"eval $(reana-dev client-setup-environment --server-hostname "
-        f"https://localhost:{hostport}) && "
-        f"reana-dev run-example --client {client_flavour}"
+        f"reana-dev run-example --client {client_flavour} "
+        f"--server https://localhost:{hostport} --no-tls-verify"
     )
     for component in components:
         cmd += " -c {}".format(component)
@@ -471,79 +471,115 @@ def run_ci(
     run_command(cmd, "reana")
 
 
-def ensure_client_login(client_executable):
-    """Ensure the client is authenticated against REANA_SERVER_URL.
-
-    Probe the server with an authenticated ``ping``. When the probe fails on
-    an interactive terminal, start the client's OIDC login and continue only
-    after a confirming ping, so that examples only run with working
-    credentials. A working ``REANA_ACCESS_TOKEN`` passes the probe untouched;
-    a failing one is dropped from this process's environment only, and only
-    after explicit confirmation, since the probe failure may have another
-    cause and the token may name a deliberately selected identity.
-    """
-    server_url = os.environ.get("REANA_SERVER_URL")
-    if not server_url:
-        click.secho(
-            "[ERROR] REANA_SERVER_URL is not set. Please run "
-            '`eval "$(reana-dev client-setup-environment)"` first.',
-            fg="red",
+def _normalise_client_server_url(url):
+    """Compare destinations using the clients' default scheme and spelling."""
+    parsed = urlsplit(url if "://" in url else f"https://{url}")
+    return urlunsplit(
+        (
+            parsed.scheme.lower(),
+            parsed.netloc.lower(),
+            parsed.path.rstrip("/"),
+            parsed.query,
+            parsed.fragment,
         )
-        sys.exit(1)
+    )
+
+
+def _client_probe_output(probe):
+    """Combine the client's normal output and error diagnostic."""
+    return "\n".join(
+        stream.strip() for stream in (probe.stdout, probe.stderr) if stream.strip()
+    )
+
+
+def _client_probe_server(probe):
+    """Read the selected server from ping output, without opening its store."""
+    output = _client_probe_output(probe)
+    match = re.search(r"^REANA server: (\S+)", output, re.MULTILINE)
+    if not match:
+        match = re.search(
+            r"(https?://\S+) \(from (?:saved login|environment|login option)\)", output
+        )
+    return _normalise_client_server_url(match[1]) if match else None
+
+
+def ensure_client_login(client_executable, server=None, no_tls_verify=False):
+    """Probe saved credentials before login, respecting an explicit destination.
+
+    The client owns connection settings. Read its diagnostics, never its store.
+    An explicit bypass is forwarded to login; it is never inferred from a host.
+    """
 
     def ping():
         return subprocess.run(
             [client_executable, "ping"], capture_output=True, text=True
         )
 
-    def diagnostic(probe):
-        return "\n".join(
-            stream.strip() for stream in (probe.stdout, probe.stderr) if stream.strip()
-        )
-
     probe = ping()
-    if probe.returncode == 0:
+    selected = _client_probe_server(probe)
+    target = _normalise_client_server_url(server) if server else selected
+    if probe.returncode == 0 and selected and (not target or selected == target):
         return
-
+    server_url = target or "https://localhost:30443"
     token_is_set = bool(os.environ.get("REANA_ACCESS_TOKEN"))
-    rerun_command = " ".join(
-        shlex.quote(argument)
-        for argument in [os.path.basename(sys.argv[0]), *sys.argv[1:]]
-    )
-    # Pin the selected server into the re-run: within run-ci this variable
-    # only exists in an intermediate shell, so a re-run from the parent
-    # shell would otherwise lack it or inherit a different server.
-    rerun_command = f"REANA_SERVER_URL={shlex.quote(server_url)} {rerun_command}"
+    rerun_args = [os.path.basename(sys.argv[0]), *sys.argv[1:], "--server", server_url]
+    if no_tls_verify and "--no-tls-verify" not in rerun_args:
+        rerun_args.append("--no-tls-verify")
+    rerun_command = shlex.join(rerun_args)
     if token_is_set:
-        # The exported token overrides login credentials, so a plain re-run
-        # would keep failing even after a successful login.
         rerun_command = f"env -u REANA_ACCESS_TOKEN {rerun_command}"
+    login_args = [client_executable, "login", "--server", server_url]
+    if no_tls_verify:
+        login_args.append("--no-tls-verify")
     resume_hint = (
         f"To resume without rebuilding, run:\n"
-        f"  $ {client_executable} login --server-url {shlex.quote(server_url)}\n"
+        f"  $ {shlex.join(login_args)}\n"
         f"  $ {rerun_command}\n"
-        f"Add `--headless` to the login on machines without a browser."
+        "Add `--headless` to the login on machines without a browser."
     )
+
+    if not target and not no_tls_verify:
+        resume_hint += (
+            "\nIf this local development cluster uses a self-signed certificate, "
+            "add `--no-tls-verify` to the login command."
+        )
 
     def abort(message, probe_result=None):
         if probe_result is not None:
-            display_message(diagnostic(probe_result), component="reana")
+            display_message(_client_probe_output(probe_result), component="reana")
         click.secho(f"[ERROR] {message}\n{resume_hint}", fg="red")
         sys.exit(1)
 
+    output = _client_probe_output(probe)
+    if not target and "No REANA server is configured" not in output:
+        abort(
+            "Could not determine the selected server. Resolve the client diagnostic before continuing.",
+            probe,
+        )
+    if "no longer client inputs" in output:
+        abort(
+            "Remove the retired client environment variables before continuing.", probe
+        )
+    # Retrying authentication cannot repair a network failure. An explicit TLS
+    # choice can repair a certificate failure, so allow that login attempt.
+    if (
+        selected == server_url
+        and "Could not connect to" in output
+        and not (no_tls_verify and "TLS certificate" in output)
+    ):
+        abort("Resolve the connection problem before logging in again.", probe)
     if not (sys.stdin.isatty() and sys.stdout.isatty()):
         abort(
             f"Client is not authenticated against {server_url} and no "
-            f"interactive terminal is available to start a login.",
-            probe_result=probe,
+            "interactive terminal is available to start a login.",
+            probe,
         )
     if token_is_set:
         display_message(
-            f"REANA_ACCESS_TOKEN is set and overrides login credentials, "
-            f"but it did not authenticate against {server_url}:\n"
-            f"{diagnostic(probe)}\n"
-            f"Note that the failure may also have another cause, such as "
-            f"the server being unavailable.",
+            "REANA_ACCESS_TOKEN is set and overrides login credentials, "
+            f"but it did not authenticate against {server_url}:\n{output}\n"
+            "Note that the failure may also have another cause, such as "
+            "the server being unavailable.",
             component="reana",
         )
         if not click.confirm(
@@ -553,24 +589,18 @@ def ensure_client_login(client_executable):
         ):
             abort("Keeping REANA_ACCESS_TOKEN as requested.")
         os.environ.pop("REANA_ACCESS_TOKEN")
-    else:
-        display_message(
-            f"Client is not authenticated against {server_url}.",
-            component="reana",
-        )
     display_message(
-        f"Starting `{client_executable} login`; please authenticate.",
-        component="reana",
+        f"Starting `{client_executable} login`; please authenticate.", component="reana"
     )
-    login = subprocess.run([client_executable, "login", "--server-url", server_url])
+    login = subprocess.run(login_args)
     if login.returncode != 0:
         abort("Login did not succeed.")
     confirmation = ping()
-    if confirmation.returncode != 0:
+    if confirmation.returncode != 0 or _client_probe_server(confirmation) != server_url:
         abort(
-            f"Logged in to {server_url}, but the server still rejects "
-            f"requests; see the diagnostic above.",
-            probe_result=confirmation,
+            f"Login did not establish a working connection to {server_url}; "
+            "see the diagnostic above.",
+            confirmation,
         )
     display_message(f"Logged in to {server_url}.", component="reana")
 
@@ -635,6 +665,14 @@ def ensure_client_login(client_executable):
 @click.option(
     "--check-only", is_flag=True, help="Wait for previously submitted workflows."
 )
+@click.option(
+    "--server", help="REANA server to use; otherwise reuse the saved selection."
+)
+@click.option(
+    "--no-tls-verify",
+    is_flag=True,
+    help="Explicitly disable certificate verification when login is needed.",
+)
 @client_option
 @run_commands.command(name="run-example")
 def run_example(  # noqa: C901
@@ -649,6 +687,8 @@ def run_example(  # noqa: C901
     submit_only,
     check_only,
     client_flavour,
+    server,
+    no_tls_verify,
 ):  # noqa: D301
     """Run given REANA example with given workflow engine.
 
@@ -713,7 +753,7 @@ def run_example(  # noqa: C901
         )
         sys.exit(1)
 
-    ensure_client_login(client_executable)
+    ensure_client_login(client_executable, server, no_tls_verify)
 
     components = sorted(select_components(component))
     workflow_engines = sorted(select_workflow_engines(workflow_engine))

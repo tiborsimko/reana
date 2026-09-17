@@ -42,7 +42,9 @@ def test_client_setup_environment_has_only_effective_url_option():
     assert "--namespace" not in help_result.output
     assert "--instance-name" not in help_result.output
     assert result.exit_code == 0
-    assert result.output == "export REANA_SERVER_URL=http://reana.example.org:8080\n"
+    assert (
+        result.output == "reana-client login --server http://reana.example.org:8080\n"
+    )
 
 
 def test_shorten_component_name():
@@ -523,6 +525,11 @@ def test_run_ci_propagates_client_flavour(
     commands = [invocation.args[0] for invocation in mock_run_command.call_args_list]
     assert result.exit_code == 0
     assert "reana-dev client-install" in commands
+    assert all("eval " not in command for command in commands)
+    assert any(
+        "--server https://localhost:" in command and "--no-tls-verify" in command
+        for command in commands
+    )
     assert any(
         f"reana-dev run-example --client {client_flavour}" in command
         for command in commands
@@ -755,19 +762,27 @@ def _pretend_interactive(monkeypatch):
     monkeypatch.setattr(sys, "stdout", _AlwaysTTY(sys.stdout))
 
 
-def test_ensure_client_login_requires_server_url(monkeypatch, capsys):
-    """Fail fast when REANA_SERVER_URL is not exported."""
+def test_ensure_client_login_guides_initial_setup(monkeypatch, capsys, tmp_path):
+    """With no resolved server, show initial local login guidance."""
     monkeypatch.delenv("REANA_SERVER_URL", raising=False)
     with pytest.raises(SystemExit):
-        ensure_client_login("/bin/true")
-    assert "client-setup-environment" in capsys.readouterr().out
+        ensure_client_login(
+            _make_stub_client(tmp_path, 'echo "No REANA server is configured"\nexit 1')
+        )
+    output = capsys.readouterr().out
+    assert "login --server https://localhost:30443\n" in output
+    assert "add `--no-tls-verify` to the login command" in output
 
 
 def test_ensure_client_login_passes_with_working_credentials(tmp_path, monkeypatch):
     """A successful probe proceeds and keeps a working token untouched."""
-    monkeypatch.setenv("REANA_SERVER_URL", "https://localhost:30443")
+    monkeypatch.delenv("REANA_SERVER_URL", raising=False)
     monkeypatch.setenv("REANA_ACCESS_TOKEN", "working-token")
-    ensure_client_login(_make_stub_client(tmp_path, "exit 0"))
+    ensure_client_login(
+        _make_stub_client(
+            tmp_path, 'echo "REANA server: https://localhost:30443"\nexit 0'
+        )
+    )
     assert os.environ["REANA_ACCESS_TOKEN"] == "working-token"
 
 
@@ -775,32 +790,34 @@ def test_ensure_client_login_noninteractive_shows_resume_commands(
     tmp_path, monkeypatch, capsys
 ):
     """Without a terminal, print the diagnostic and exact resume commands."""
-    monkeypatch.setenv("REANA_SERVER_URL", "https://localhost:30443")
+    monkeypatch.delenv("REANA_SERVER_URL", raising=False)
     monkeypatch.setenv("REANA_ACCESS_TOKEN", "stale-token")
     stub = _make_stub_client(tmp_path, 'echo "==> ERROR: please run login" >&2\nexit 1')
     with pytest.raises(SystemExit):
-        ensure_client_login(stub)
+        ensure_client_login(stub, "https://localhost:30443")
     output = capsys.readouterr().out
     assert "==> ERROR: please run login" in output
-    assert f"{stub} login --server-url https://localhost:30443" in output
+    assert f"{stub} login --server https://localhost:30443" in output
     assert (
-        "env -u REANA_ACCESS_TOKEN REANA_SERVER_URL=https://localhost:30443 " in output
+        "env -u REANA_ACCESS_TOKEN" in output
+        and "--server https://localhost:30443" in output
     )
     assert os.environ["REANA_ACCESS_TOKEN"] == "stale-token"
 
 
 def test_ensure_client_login_starts_login_interactively(tmp_path, monkeypatch, capsys):
     """Without a token, log in directly and keep the probe diagnostic quiet."""
-    monkeypatch.setenv("REANA_SERVER_URL", "https://localhost:30443")
+    monkeypatch.delenv("REANA_SERVER_URL", raising=False)
     monkeypatch.delenv("REANA_ACCESS_TOKEN", raising=False)
     state = tmp_path / "logged-in"
     stub = _make_stub_client(
         tmp_path,
         f'if [ "$1" = "login" ]; then touch "{state}"; exit 0; fi\n'
-        f'echo "==> ERROR: please run login" >&2\ntest -f "{state}"',
+        f'if test -f "{state}"; then echo "REANA server: https://localhost:30443"; exit 0; fi\n'
+        'echo "==> ERROR: please run login" >&2; exit 1',
     )
     _pretend_interactive(monkeypatch)
-    ensure_client_login(stub)
+    ensure_client_login(stub, "https://localhost:30443")
     captured = capsys.readouterr()
     assert "Logged in to https://localhost:30443." in captured.out
     assert "==> ERROR: please run login" not in captured.out
@@ -811,20 +828,21 @@ def test_ensure_client_login_confirms_before_dropping_token(
     tmp_path, monkeypatch, capsys
 ):
     """A failing token is dropped only after showing why and confirming."""
-    monkeypatch.setenv("REANA_SERVER_URL", "https://localhost:30443")
+    monkeypatch.delenv("REANA_SERVER_URL", raising=False)
     monkeypatch.setenv("REANA_ACCESS_TOKEN", "stale-token")
     state = tmp_path / "logged-in"
     stub = _make_stub_client(
         tmp_path,
         f'if [ "$1" = "login" ]; then touch "{state}"; exit 0; fi\n'
-        f'echo "==> ERROR: HTTP 401" >&2\ntest -f "{state}"',
+        f'if test -f "{state}"; then echo "REANA server: https://localhost:30443"; exit 0; fi\n'
+        'echo "==> ERROR: HTTP 401" >&2; exit 1',
     )
     _pretend_interactive(monkeypatch)
     confirmations = []
     monkeypatch.setattr(
         click, "confirm", lambda *args, **kwargs: confirmations.append(args) or True
     )
-    ensure_client_login(stub)
+    ensure_client_login(stub, "https://localhost:30443")
     assert len(confirmations) == 1
     assert "REANA_ACCESS_TOKEN" not in os.environ
     assert "==> ERROR: HTTP 401" in capsys.readouterr().out
@@ -832,28 +850,28 @@ def test_ensure_client_login_confirms_before_dropping_token(
 
 def test_ensure_client_login_keeps_token_when_declined(tmp_path, monkeypatch, capsys):
     """Declining the confirmation keeps the token and exits with guidance."""
-    monkeypatch.setenv("REANA_SERVER_URL", "https://localhost:30443")
+    monkeypatch.delenv("REANA_SERVER_URL", raising=False)
     monkeypatch.setenv("REANA_ACCESS_TOKEN", "chosen-token")
     stub = _make_stub_client(tmp_path, "exit 1")
     _pretend_interactive(monkeypatch)
     monkeypatch.setattr(click, "confirm", lambda *args, **kwargs: False)
     with pytest.raises(SystemExit):
-        ensure_client_login(stub)
+        ensure_client_login(stub, "https://localhost:30443")
     assert os.environ["REANA_ACCESS_TOKEN"] == "chosen-token"
     assert "env -u REANA_ACCESS_TOKEN" in capsys.readouterr().out
 
 
 def test_ensure_client_login_reports_login_failure(tmp_path, monkeypatch, capsys):
     """A failing login exits with resume commands carrying the server URL."""
-    monkeypatch.setenv("REANA_SERVER_URL", "https://localhost:30443")
+    monkeypatch.delenv("REANA_SERVER_URL", raising=False)
     monkeypatch.delenv("REANA_ACCESS_TOKEN", raising=False)
     stub = _make_stub_client(tmp_path, "exit 1")
     _pretend_interactive(monkeypatch)
     with pytest.raises(SystemExit):
-        ensure_client_login(stub)
+        ensure_client_login(stub, "https://localhost:30443")
     output = capsys.readouterr().out
     assert "Login did not succeed." in output
-    assert "REANA_SERVER_URL=https://localhost:30443 " in output
+    assert "--server https://localhost:30443" in output
     assert "env -u" not in output
 
 
@@ -861,7 +879,7 @@ def test_ensure_client_login_reports_failing_confirmation(
     tmp_path, monkeypatch, capsys
 ):
     """A login that still cannot ping shows that probe's diagnostic."""
-    monkeypatch.setenv("REANA_SERVER_URL", "https://localhost:30443")
+    monkeypatch.delenv("REANA_SERVER_URL", raising=False)
     monkeypatch.delenv("REANA_ACCESS_TOKEN", raising=False)
     stub = _make_stub_client(
         tmp_path,
@@ -870,7 +888,7 @@ def test_ensure_client_login_reports_failing_confirmation(
     )
     _pretend_interactive(monkeypatch)
     with pytest.raises(SystemExit):
-        ensure_client_login(stub)
+        ensure_client_login(stub, "https://localhost:30443")
     output = capsys.readouterr().out
-    assert "still rejects" in output
+    assert "did not establish a working connection" in output
     assert "==> ERROR: HTTP 403 missing role" in output

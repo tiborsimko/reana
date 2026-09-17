@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 # This file is part of REANA.
-# Copyright (C) 2022 CERN.
+# Copyright (C) 2022, 2026 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
@@ -154,7 +154,7 @@ def run_tests(version: Optional[str], output: str) -> None:
 
     The script requires python 3.7+.
 
-    Steps to run CWL conformance tests:
+    Steps to run CWL conformance tests with REANA 0.9 clients:
 
         .. code-block:: console
 
@@ -166,6 +166,16 @@ def run_tests(version: Optional[str], output: str) -> None:
         $ reana-client ping  # check if REANA server is reachable
         $ python run_cwl_conformance_tests.py --version v1.2  # to run tests for CWL v1.2 only
         $ python run_cwl_conformance_tests.py  # to run tests for all CWL versions
+
+    As of REANA 0.95, replace the two exports above with saved login:
+
+        .. code-block:: console
+
+        \b
+        $ unset REANA_SERVER_URL REANA_SERVER_TLS_VERIFY REANA_ACCESS_TOKEN
+        $ reana-client login --server https://your-reana-server
+
+    For a self-signed local development cluster, add --no-tls-verify to login.
 
     WARNING: This script is working on Linux, but not on MacOS. You will need to use Docker to run it on MacOS.
 

@@ -157,9 +157,10 @@ fi
 
 # Success!
 echo "Success! ${setup_result}"
-echo "You may now set the following environment variables:"
+echo "You may now authenticate the command line client:"
 echo ""
-echo "  $ export REANA_SERVER_URL=https://localhost:30443  # or use your URL"
+echo "  $ reana-client login --server https://localhost:30443  # or use your URL"
 echo ""
-echo "Run 'reana-client login' before using the command line client."
+echo "For a self-signed local development cluster, add --no-tls-verify."
+echo "Unset any old REANA_SERVER_URL, REANA_SERVER_TLS_VERIFY and REANA_ACCESS_TOKEN exports first."
 echo "Please see http://docs.reana.io/getting-started/ on how to run your first REANA example."

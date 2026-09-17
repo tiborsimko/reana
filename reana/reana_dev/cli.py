@@ -94,12 +94,12 @@ def reana_dev():  # noqa: D301
         $ reana-dev kind-load-docker-image -c CLUSTER-RUNTIMEBATCH -n kind-worker2
         $ reana-dev kind-load-docker-image -c reana-demo-worldpopulation -n kind-worker3
 
-    How to set up your shell environment variables:
+    How to connect the client to a self-signed local development cluster:
 
     .. code-block:: console
 
         \b
-        $ eval $(reana-dev client-setup-environment)
+        $ reana-client login --server https://localhost:30443 --no-tls-verify
 
     How to run full REANA example using a given workflow engine:
 

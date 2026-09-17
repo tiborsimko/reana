@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # This file is part of REANA.
-# Copyright (C) 2021 CERN.
+# Copyright (C) 2021, 2026 CERN.
 #
 # REANA is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
@@ -38,10 +38,14 @@ logging.basicConfig(
 def reana_benchmark():  # noqa: D301
     """reana-benchmark script - runs single workflow multiple times, collects results, analyzes them.
 
-    Prerequisites:
+    Legacy prerequisites (reana-client 0.8.x):
 
         - install reana-client 0.8.x, pandas and matplotlib Python packages
         - set REANA_ACCESS_TOKEN and REANA_SERVER_URL
+
+    REANA 0.95 compatibility is pending migration to the current workflow API
+    and saved authentication. The environment setup above is for legacy clients;
+    REANA 0.95 clients reject REANA_SERVER_URL and REANA_SERVER_TLS_VERIFY.
 
     How to launch 50 concurrent workflows and collect results (option 1):
 

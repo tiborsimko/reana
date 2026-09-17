@@ -152,18 +152,25 @@ def client_uninstall():  # noqa: D301
 
 
 @client_commands.command(name="client-setup-environment")
-@click.option("--server-hostname", help="Set customized REANA Server hostname.")
-def client_setup_environment(server_hostname):  # noqa: D301
-    """Display commands to set up shell environment for local cluster.
+@click.option("--server-hostname", help="Set customised REANA Server hostname.")
+@click.option(
+    "--no-tls-verify",
+    is_flag=True,
+    help="Print a login command for a self-signed development server.",
+)
+def client_setup_environment(server_hostname, no_tls_verify):
+    """Display a login command for the user; do not evaluate this output."""
+    import shlex
 
-    Display commands how to set up REANA_SERVER_URL suitable for current local
-    REANA cluster deployment. The output should be passed to eval.
-    """
-    click.echo(
-        "export REANA_SERVER_URL={}".format(
-            server_hostname or "https://localhost:30443"
-        )
-    )
+    command = [
+        "reana-client",
+        "login",
+        "--server",
+        server_hostname or "https://localhost:30443",
+    ]
+    if no_tls_verify:
+        command.append("--no-tls-verify")
+    click.echo(shlex.join(command))
 
 
 client_commands_list = list(client_commands.commands.values())

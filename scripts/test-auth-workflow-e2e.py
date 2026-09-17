@@ -276,20 +276,32 @@ class E2E:
         return response
 
     def client(self, *args, check=True, cwd=None):
-        env = os.environ.copy()
-        env.update(
-            {
-                "REANA_SERVER_URL": self.server_url,
-                "REANA_ACCESS_TOKEN": self.access_token,
-                "REANA_SERVER_TLS_VERIFY": "false",
-            }
-        )
-        return self.run(
-            [self.client_path, *args],
-            cwd=cwd or self.demo_dir,
-            env=env,
-            check=check,
-        )
+        # Browser-session tokens remain explicit; connection settings belong to
+        # an isolated client store, never the developer's saved login.
+        with tempfile.TemporaryDirectory(prefix="reana-e2e-client-") as directory:
+            config_path = Path(directory) / "client.json"
+            config_path.write_text(
+                json.dumps(
+                    {
+                        "active_server": self.server_url,
+                        "servers": {self.server_url: {"tls": {"verify": False}}},
+                    }
+                )
+            )
+            config_path.chmod(0o600)
+            env = os.environ.copy()
+            for name in ("REANA_SERVER_URL", "REANA_SERVER_TLS_VERIFY"):
+                env.pop(name, None)
+            env.update(
+                REANA_CLIENT_CONFIG=str(config_path),
+                REANA_ACCESS_TOKEN=self.access_token,
+            )
+            return self.run(
+                [self.client_path, *args],
+                cwd=cwd or self.demo_dir,
+                env=env,
+                check=check,
+            )
 
     def operational_script(self, script_name, *args):
         """Run an authenticated operational probe with the current OIDC token."""

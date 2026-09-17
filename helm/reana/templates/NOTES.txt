@@ -121,10 +121,8 @@ finalise its configuration.
 
     $ # install REANA client
     $ pip install --user reana-client
-    $ # set environment variables for REANA client
-    $ export REANA_SERVER_URL=https://{{ .Values.reana_hostname }}:{{.Values.reana_hostport}}
     $ # authenticate and test connection to the REANA cluster
-    $ reana-client login
+    $ reana-client login --server https://{{ .Values.reana_hostname }}:{{.Values.reana_hostport}}{{ if and .Values.ingress.enabled .Values.ingress.tls.self_signed_cert }} --no-tls-verify{{ end }}
     $ reana-client ping
     $ # clone and run a simple analysis example
     $ git clone https://github.com/reanahub/reana-demo-root6-roofit
